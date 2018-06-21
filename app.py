@@ -39,7 +39,7 @@ from pymongo import MongoClient
 
 #The following method/function is used for logging inside a MongoDB
 def logThis(jsonobject):
-    client = MongoClient('mongodb://<dbuser>:<dbpassword>@ds163700.mlab.com:63700/heroku_7v64g95t')
+    client = MongoClient('mongodb://webhook:test1234@ds163700.mlab.com:63700/heroku_7v64g95t')
     db=client.heroku_7v64g95t
     collection=db.logs
     tempstring = json.dumps(jsonobject)
@@ -91,8 +91,8 @@ def webhook():
     return r
 
 def processRequest(req):
-    #req['datetime'] = str(datetime.datetime.now())
-    #logThis(req)
+    req['datetime'] = str(datetime.datetime.now())
+    logThis(req)
     intent = req["queryResult"]["intent"]["displayName"]
     print(intent)
     if intent == "Default Welcome Intent":
