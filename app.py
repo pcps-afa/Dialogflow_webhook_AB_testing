@@ -91,8 +91,8 @@ def webhook():
     return r
 
 def processRequest(req):
-    req['datetime'] = str(datetime.datetime.now())
-    logThis(req)
+    #req['datetime'] = str(datetime.datetime.now())
+    #logThis(req)
     intent = req["queryResult"]["intent"]["displayName"]
     print(intent)
     if intent == "Default Welcome Intent":
