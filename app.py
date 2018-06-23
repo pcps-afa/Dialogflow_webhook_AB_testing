@@ -27,13 +27,19 @@ import os
 import requests
 import pymongo
 import datetime
+import random
 
 from flask import Flask
 from flask import request
 from flask import make_response
 from flask import jsonify
 from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Column, Integer, String
 from pymongo import MongoClient
+
+Base = declarative_base()
 
 # ---------------- General Functions needed for parts of the Webhook -----------------------
 
@@ -55,18 +61,44 @@ def remove_dot_key(obj):
             del obj[key]
     return obj
 
-#def getAB(session):
-#    engine = create_engine('postgres://xtyzrsbbxaqvgd:ebf3b4afb47d732ef7ee94229f3811b1e6f760756504877adb77b995c18dba7d@ec2-54-195-246-59.eu-west-1.compute.amazonaws.com:5432/df0vsdafnmm008')
-#    connection = engine.connect()
-#    AorB = connection.execute('select * from AB_table where session=' + "'" + session + "'")
-#    if AorB is None:
-#        return "ERROR or no information found"
-#    else:
-#        for row in translation:
-#            returnString = row[language]
-#        return returnString
-#    connection.close()
+class obj(Base):
+    __tablename__ = 'sessions'
+    session_id = Column(String, primary_key=True)
+    aorb = Column(String)
 
+def getAB(session_dialogflow):
+    engine = create_engine('postgres://gfrntxrxeqrjve:4114c77276ac0b99b4618a9670b84b08d5e9ee05e311ff11a95c721cb27d117d@ec2-54-247-100-44.eu-west-1.compute.amazonaws.com:5432/d2lhs9sdnsr655')
+    connection = engine.connect()
+    AorB = connection.execute('select * from sessions where session_id=' + "'" + session_dialogflow + "'")
+    print(AorB)
+    if AorB is None:
+        return "Error"
+    else:
+        rows_count = 0
+        for row in AorB:
+            rows_count += 1
+        if not rows_count:
+            decision = bool(random.getrandbits(1))
+            print(decision)
+            if decision is True:
+                Session = sessionmaker(bind=engine, autoflush=True, autocommit=True)
+                sess = Session()
+                A = obj(session_id=session_dialogflow, aorb='A')
+                sess.add(A)
+                connection.close()
+                return 'A'
+            else:
+                Session = sessionmaker(bind=engine, autoflush=True, autocommit=True)
+                sess = Session()
+                B= obj(session_id=session_dialogflow, aorb='B')
+                sess.add(B)
+                connection.close()
+                return 'B'
+        else:
+            for row in AorB:
+                col = "aorb"
+                returnString = row[col]
+            return returnString
 
 # ------------------------------ Actual Webhook work starts from here ------------------------------------------
 
@@ -92,14 +124,26 @@ def webhook():
 
 def processRequest(req):
     req['datetime'] = str(datetime.datetime.now())
+    stringwithsession = req["queryResult"]["outputContexts"][0]["name"]
+    session_dialogflow = stringwithsession[0:77]
+    print(session_dialogflow)
+    ABtest = getAB(session_dialogflow)
+
     logThis(req)
     intent = req["queryResult"]["intent"]["displayName"]
     print(intent)
+
     if intent == "Default Welcome Intent":
+       if ABtest == "A":
         return {
-            "fulfillmentText": "Hello World",
+            "fulfillmentText": "Hello World A",
             "source": "webhook-EH"
         }
+       if ABtest == "B":
+            return {
+                "fulfillmentText": "Hello World B",
+                "source": "webhook-EH"
+            }
 
     else:
         return{}
