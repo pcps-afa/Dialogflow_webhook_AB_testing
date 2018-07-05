@@ -45,7 +45,7 @@ Base = declarative_base()
 
 def logThis(jsonobject):
     #please add your newly created "mongodb://..." in here:
-    client = MongoClient('mongodb://webhook:test1234@ds163700.mlab.com:63700/heroku_7v64g95t')
+    client = MongoClient('blablabla')
     db=client.heroku_7v64g95t
     collection=db.logs
     tempstring = json.dumps(jsonobject)
@@ -69,7 +69,7 @@ class obj(Base):
 
 def getAB(session_dialogflow):
     #please add your newly created "postgres://..." in here:
-    engine = create_engine('postgres://gfrntxrxeqrjve:4114c77276ac0b99b4618a9670b84b08d5e9ee05e311ff11a95c721cb27d117d@ec2-54-247-100-44.eu-west-1.compute.amazonaws.com:5432/d2lhs9sdnsr655')
+    engine = create_engine('blablabla')
     connection = engine.connect()
     AorB = connection.execute('select * from sessions where session_id=' + "'" + session_dialogflow + "'")
     if AorB is None:
