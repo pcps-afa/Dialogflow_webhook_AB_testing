@@ -43,8 +43,8 @@ Base = declarative_base()
 
 # ---------------- General Functions needed for parts of the Webhook -----------------------
 
-#The following method/function is used for logging inside a MongoDB
 def logThis(jsonobject):
+    #please add your newly created "mongodb://..." in here:
     client = MongoClient('mongodb://webhook:test1234@ds163700.mlab.com:63700/heroku_7v64g95t')
     db=client.heroku_7v64g95t
     collection=db.logs
@@ -52,7 +52,8 @@ def logThis(jsonobject):
     new_json = json.loads(tempstring, object_hook=remove_dot_key)
     collection.insert(new_json)
 
-#This is used to remove any dots from the keys in the JSON, because that's not allowed in MongoDB (we're using 3.4.x, it would be allowed in 3.6.1 but pymongo would still not allow for it...)
+#This method is used to remove any dots from the keys in the JSON, because that's not allowed in MongoDB 
+#NB: we're using 3.4.x, it would be allowed in 3.6.1 but pymongo would still not allow for it...
 def remove_dot_key(obj):
     for key in obj.keys():
         new_key = key.replace(".","")
@@ -67,11 +68,12 @@ class obj(Base):
     aorb = Column(String)
 
 def getAB(session_dialogflow):
+    #please add your newly created "postgres://..." in here:
     engine = create_engine('postgres://gfrntxrxeqrjve:4114c77276ac0b99b4618a9670b84b08d5e9ee05e311ff11a95c721cb27d117d@ec2-54-247-100-44.eu-west-1.compute.amazonaws.com:5432/d2lhs9sdnsr655')
     connection = engine.connect()
     AorB = connection.execute('select * from sessions where session_id=' + "'" + session_dialogflow + "'")
-    print(AorB)
     if AorB is None:
+        print("database error")
         return "Error"
     else:
         rows_count = 0
@@ -79,25 +81,37 @@ def getAB(session_dialogflow):
             rows_count += 1
         if not rows_count:
             decision = bool(random.getrandbits(1))
-            print(decision)
             if decision is True:
-                Session = sessionmaker(bind=engine, autoflush=True, autocommit=True)
-                sess = Session()
-                A = obj(session_id=session_dialogflow, aorb='A')
+                #define A
+                string_A = "A"
+                Session = sessionmaker(autoflush=True)
+                sess = Session(bind=engine)
+                A = obj(session_id=session_dialogflow, aorb=string_A)
                 sess.add(A)
+                sess.commit()
                 connection.close()
-                return 'A'
+                return string_A
             else:
-                Session = sessionmaker(bind=engine, autoflush=True, autocommit=True)
-                sess = Session()
-                B= obj(session_id=session_dialogflow, aorb='B')
+                #define B
+                string_B = "B"
+                Session = sessionmaker(autoflush=True)
+                sess = Session(bind=engine)
+                B= obj(session_id=session_dialogflow, aorb=string_B)
                 sess.add(B)
+                sess.commit()
                 connection.close()
-                return 'B'
+                return string_B
         else:
-            for row in AorB:
-                col = "aorb"
+            AorB2 = connection.execute('select * from sessions where session_id=' + "'" + session_dialogflow + "'")
+            #You may ask yourself "Why is he defining "AorB2"? This has to do with how python handles scopes.
+            #Initially, AorB is a global variable, defined outside any function or class; it can be accessed from any scope.
+            #The above "for row in AorB" causes AorB to revert to a local scope; AorB is not available anymore as a global variable
+            #Quick and dirty solution: we have to define a new variable in global scope again
+            #Cudos out to the user turtles-are-cute on Stackoverflow for figuring this one out!
+            col = "aorb"
+            for row in AorB2:
                 returnString = row[col]
+                print(returnString)
             return returnString
 
 # ------------------------------ Actual Webhook work starts from here ------------------------------------------
@@ -122,13 +136,15 @@ def webhook():
     
     return r
 
+#Now the processRequest method is where you'll get most of your work done ;-)
 def processRequest(req):
     req['datetime'] = str(datetime.datetime.now())
     stringwithsession = req["queryResult"]["outputContexts"][0]["name"]
+    #you may need to change the "77" below according to the length of your project name in Dialogflow so that it doesn't cut anything off
     session_dialogflow = stringwithsession[0:77]
     print(session_dialogflow)
     ABtest = getAB(session_dialogflow)
-
+    req['AorB'] = ABtest
     logThis(req)
     intent = req["queryResult"]["intent"]["displayName"]
     print(intent)
